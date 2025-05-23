@@ -72,10 +72,10 @@ public class Worker : BackgroundService
                 using var connection = factory.CreateConnection();
                 using var channel = connection.CreateModel();
 
-                // Declarar el exchange
+                // Declare the exchange
                 channel.ExchangeDeclare(_settings.ExchangeName, ExchangeType.Topic, true);
 
-                // Declarar y vincular las colas
+                // Declare and bind the queues
                 var createQueue = channel.QueueDeclare("product.create", true, false, false);
                 var updateQueue = channel.QueueDeclare("product.update", true, false, false);
                 var deleteQueue = channel.QueueDeclare("product.delete", true, false, false);
@@ -95,10 +95,10 @@ public class Worker : BackgroundService
                         var routingKey = ea.RoutingKey;
                         var timestamp = DateTime.Now;
 
-                        Console.WriteLine("\n=== Nuevo Evento Recibido ===");
+                        Console.WriteLine("\n=== New Event Received ===");
                         Console.WriteLine($"Timestamp: {timestamp:yyyy-MM-dd HH:mm:ss}");
-                        Console.WriteLine($"Tipo de Evento: {routingKey}");
-                        Console.WriteLine("Datos del Producto:");
+                        Console.WriteLine($"Event Type: {routingKey}");
+                        Console.WriteLine("Product Data:");
                         
                         try
                         {
@@ -116,30 +116,30 @@ public class Worker : BackgroundService
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error processing message");
-                        Console.WriteLine($"Error procesando mensaje: {ex.Message}");
+                        Console.WriteLine($"Error processing message: {ex.Message}");
                     }
                 };
 
-                // Consumir de las tres colas
+                // Consume from the three queues
                 channel.BasicConsume(queue: "product.create", autoAck: true, consumer: consumer);
                 channel.BasicConsume(queue: "product.update", autoAck: true, consumer: consumer);
                 channel.BasicConsume(queue: "product.delete", autoAck: true, consumer: consumer);
 
-                _logger.LogInformation("Worker iniciado y escuchando mensajes...");
-                Console.WriteLine("Worker iniciado y escuchando mensajes...");
+                _logger.LogInformation("Worker started and listening for messages...");
+                Console.WriteLine("Worker started and listening for messages...");
 
-                // Mantener la conexión viva
+                // Keep the connection alive
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     await Task.Delay(1000, stoppingToken);
                 }
 
-                return; // Si llegamos aquí, la conexión fue exitosa
+                return; // If we reach here, the connection was successful
             }
             catch (Exception ex)
             {
                 retryCount++;
-                _logger.LogError(ex, $"Error en intento {retryCount} de {MaxRetries}");
+                _logger.LogError(ex, $"Error in attempt {retryCount} of {MaxRetries}");
                 
                 if (retryCount < MaxRetries)
                 {
@@ -147,7 +147,7 @@ public class Worker : BackgroundService
                 }
                 else
                 {
-                    throw; // Re-lanzar la excepción para que el Circuit Breaker la maneje
+                    throw; // Re-throw the exception for the Circuit Breaker to handle
                 }
             }
         }
