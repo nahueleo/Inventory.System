@@ -27,7 +27,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         };
 
         var createdProduct = await _productRepository.AddAsync(product);
-        await _messagePublisher.PublishAsync(createdProduct, RoutingKeys.ProductCreated);
+        await _messagePublisher.PublishAsync(createdProduct, RoutingKey.ProductCreated);
 
         return createdProduct.Id;
     }

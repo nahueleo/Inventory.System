@@ -28,7 +28,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         product.UpdatedAt = DateTime.Now;
 
         await _productRepository.UpdateAsync(product);
-        await _messagePublisher.PublishAsync(product, RabbitMQConstants.RoutingKeys.ProductUpdated);
+        await _messagePublisher.PublishAsync(product, RoutingKey.ProductUpdated);
 
         return product.Id;
     }

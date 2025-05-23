@@ -4,12 +4,14 @@ using Inventory.Domain.Interfaces;
 using Inventory.Infrastructure.Configuration;
 using RabbitMQ.Client;
 using Microsoft.Extensions.Logging;
+using Inventory.Domain.Constants;
 
 namespace Inventory.Infrastructure.Services;
 
 public class RabbitMQMessagePublisher : IMessagePublisher
 {
     private readonly IConnection _connection;
+    private readonly IModel _channel;
     private readonly RabbitMQSettings _settings;
     private readonly CircuitBreaker _circuitBreaker;
     private readonly ILogger<RabbitMQMessagePublisher> _logger;
@@ -17,22 +19,25 @@ public class RabbitMQMessagePublisher : IMessagePublisher
     private readonly TimeSpan _retryDelay = TimeSpan.FromSeconds(2);
 
     public RabbitMQMessagePublisher(
-        IConnection connection, 
+        IRabbitMQConnection connectionFactory,
         RabbitMQSettings settings,
         ILogger<RabbitMQMessagePublisher> logger)
     {
-        _connection = connection;
+        _connection = connectionFactory.GetConnection();
         _settings = settings;
         _logger = logger;
+        _channel = _connection.CreateModel();
         _circuitBreaker = new CircuitBreaker(failureThreshold: 3, resetTimeoutSeconds: 30);
+        SetupExchange();
     }
 
-    public async Task PublishAsync<T>(T message, string routingKey) where T : class
+    public async Task PublishAsync<T>(T message, RoutingKey routingKey) where T : class
     {
+        var routingKeyString = routingKey.ToRoutingKeyString();
         // Validate routing key
-        if (!IsValidRoutingKey(routingKey))
+        if (!IsValidRoutingKey(routingKeyString))
         {
-            throw new ArgumentException($"Invalid routing key: {routingKey}", nameof(routingKey));
+            throw new ArgumentException($"Invalid routing key: {routingKeyString}", nameof(routingKeyString));
         }
 
         var retryCount = 0;
@@ -57,7 +62,7 @@ public class RabbitMQMessagePublisher : IMessagePublisher
 
                     channel.BasicPublish(
                         exchange: _settings.ExchangeName,
-                        routingKey: routingKey,
+                        routingKey: routingKeyString,
                         basicProperties: properties,
                         body: body);
 
@@ -95,5 +100,10 @@ public class RabbitMQMessagePublisher : IMessagePublisher
         return routingKey == Inventory.Domain.Constants.RoutingKeys.ProductCreated ||
                routingKey == Inventory.Domain.Constants.RoutingKeys.ProductUpdated ||
                routingKey == Inventory.Domain.Constants.RoutingKeys.ProductDeleted;
+    }
+
+    private void SetupExchange()
+    {
+        _channel.ExchangeDeclare(_settings.ExchangeName, ExchangeType.Topic, true);
     }
 } 

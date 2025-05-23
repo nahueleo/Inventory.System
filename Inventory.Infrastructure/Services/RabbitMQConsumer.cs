@@ -2,11 +2,13 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using Inventory.Domain.Interfaces;
 using Inventory.Infrastructure.Configuration;
+using Inventory.Domain.Constants;
 
 namespace Inventory.Infrastructure.Services;
 
-public class RabbitMQConsumer : IDisposable
+public class RabbitMQConsumer : IMessageConsumer
 {
     private readonly IConnection _connection;
     private readonly IModel _channel;
@@ -14,55 +16,55 @@ public class RabbitMQConsumer : IDisposable
     private readonly ILogger<RabbitMQConsumer> _logger;
 
     public RabbitMQConsumer(
-        IConnection connection,
+        IRabbitMQConnection connectionFactory,
         RabbitMQSettings settings,
         ILogger<RabbitMQConsumer> logger)
     {
-        _connection = connection;
+        _connection = connectionFactory.GetConnection();
         _settings = settings;
         _logger = logger;
         _channel = _connection.CreateModel();
-        SetupQueues();
+        SetupExchange();
     }
 
-    private void SetupQueues()
+    private void SetupExchange()
     {
         _channel.ExchangeDeclare(_settings.ExchangeName, ExchangeType.Topic, true);
-
-        var createQueue = _channel.QueueDeclare(Inventory.Domain.Constants.RoutingKeys.ProductCreated, true, false, false);
-        var updateQueue = _channel.QueueDeclare(Inventory.Domain.Constants.RoutingKeys.ProductUpdated, true, false, false);
-        var deleteQueue = _channel.QueueDeclare(Inventory.Domain.Constants.RoutingKeys.ProductDeleted, true, false, false);
-
-        _channel.QueueBind(createQueue.QueueName, _settings.ExchangeName, Inventory.Domain.Constants.RoutingKeys.ProductCreated);
-        _channel.QueueBind(updateQueue.QueueName, _settings.ExchangeName, Inventory.Domain.Constants.RoutingKeys.ProductUpdated);
-        _channel.QueueBind(deleteQueue.QueueName, _settings.ExchangeName, Inventory.Domain.Constants.RoutingKeys.ProductDeleted);
     }
 
-    public void StartConsuming(Action<string, string> onMessageReceived)
+    public void StartConsuming(Dictionary<RoutingKey, Action<string>> queueHandlers)
     {
-        var consumer = new EventingBasicConsumer(_channel);
-
-        consumer.Received += (model, ea) =>
+        var stringKeyHandlers = queueHandlers.ToDictionary(
+            kvp => kvp.Key.ToRoutingKeyString(),
+            kvp => kvp.Value
+        );
+        foreach (var queueHandler in stringKeyHandlers)
         {
-            try
-            {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-                var routingKey = ea.RoutingKey;
-                var timestamp = DateTime.Now;
+            var queue = _channel.QueueDeclare(queueHandler.Key, true, false, false);
+            _channel.QueueBind(queue.QueueName, _settings.ExchangeName, queueHandler.Key);
 
-                _logger.LogInformation("Message received at {Timestamp} with routing key {RoutingKey}", timestamp, routingKey);
-                onMessageReceived(routingKey, message);
-            }
-            catch (Exception ex)
+            var consumer = new EventingBasicConsumer(_channel);
+            consumer.Received += (model, ea) =>
             {
-                _logger.LogError(ex, "Error processing message");
-            }
-        };
+                try
+                {
+                    var body = ea.Body.ToArray();
+                    var message = Encoding.UTF8.GetString(body);
+                    var timestamp = DateTime.Now;
 
-        _channel.BasicConsume(queue: Inventory.Domain.Constants.RoutingKeys.ProductCreated, autoAck: true, consumer: consumer);
-        _channel.BasicConsume(queue: Inventory.Domain.Constants.RoutingKeys.ProductUpdated, autoAck: true, consumer: consumer);
-        _channel.BasicConsume(queue: Inventory.Domain.Constants.RoutingKeys.ProductDeleted, autoAck: true, consumer: consumer);
+                    _logger.LogInformation("Message received at {Timestamp} from queue {Queue}", timestamp, queueHandler.Key);
+                    queueHandler.Value(message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing message from queue {Queue}", queueHandler.Key);
+                }
+            };
+
+            _channel.BasicConsume(queue: queueHandler.Key, autoAck: true, consumer: consumer);
+        }
+
+        _logger.LogInformation("Started consuming from {Count} queues", stringKeyHandlers.Count);
     }
 
     public void Dispose()

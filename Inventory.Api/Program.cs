@@ -35,10 +35,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // Add Infrastructure
-builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddDatabase(builder.Configuration);
+builder.Services.AddRabbitMQPublisher(builder.Configuration);
 
 // Add MediatR
-builder.Services.AddMediatR(cfg => {
+builder.Services.AddMediatR(cfg =>
+{
     cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
     cfg.RegisterServicesFromAssembly(typeof(Inventory.Domain.Features.Products.Queries.GetProducts.GetProductsQuery).Assembly);
 });

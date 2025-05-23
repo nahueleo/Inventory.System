@@ -22,7 +22,7 @@ public class DeleteProductCommandHandler : IRequestHandler<DeleteProductCommand,
             throw new KeyNotFoundException($"Product with ID {request.Id} not found.");
 
         await _productRepository.DeleteAsync(product.Id);
-        await _messagePublisher.PublishAsync(product, RabbitMQConstants.RoutingKeys.ProductDeleted);
+        await _messagePublisher.PublishAsync(product, RoutingKey.ProductDeleted);
 
         return product.Id;
     }
