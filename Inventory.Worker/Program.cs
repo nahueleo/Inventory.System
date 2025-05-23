@@ -1,6 +1,4 @@
 using Inventory.Infrastructure.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace Inventory.Worker;
 

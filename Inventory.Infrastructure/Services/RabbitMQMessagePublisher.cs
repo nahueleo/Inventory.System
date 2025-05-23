@@ -29,6 +29,12 @@ public class RabbitMQMessagePublisher : IMessagePublisher
 
     public async Task PublishAsync<T>(T message, string routingKey) where T : class
     {
+        // Validate routing key
+        if (!IsValidRoutingKey(routingKey))
+        {
+            throw new ArgumentException($"Invalid routing key: {routingKey}", nameof(routingKey));
+        }
+
         var retryCount = 0;
         var lastException = default(Exception);
 
@@ -82,5 +88,12 @@ public class RabbitMQMessagePublisher : IMessagePublisher
         // If we get here, all retries failed
         _logger.LogError(lastException, "Failed to publish message after {MaxRetries} attempts", _maxRetries);
         throw new Exception($"Failed to publish message after {_maxRetries} attempts", lastException);
+    }
+
+    private bool IsValidRoutingKey(string routingKey)
+    {
+        return routingKey == Inventory.Domain.Constants.RoutingKeys.ProductCreated ||
+               routingKey == Inventory.Domain.Constants.RoutingKeys.ProductUpdated ||
+               routingKey == Inventory.Domain.Constants.RoutingKeys.ProductDeleted;
     }
 } 

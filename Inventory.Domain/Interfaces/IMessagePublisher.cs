@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace Inventory.Domain.Interfaces;
 
 public interface IMessagePublisher

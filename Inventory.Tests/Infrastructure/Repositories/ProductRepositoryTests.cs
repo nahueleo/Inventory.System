@@ -2,7 +2,6 @@ using Inventory.Domain.Entities;
 using Inventory.Infrastructure.Data;
 using Inventory.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace Inventory.Tests.Infrastructure.Repositories;
 

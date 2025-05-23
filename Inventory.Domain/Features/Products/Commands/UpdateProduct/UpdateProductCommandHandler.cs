@@ -1,6 +1,5 @@
 using MediatR;
 using Inventory.Domain.Interfaces;
-using Inventory.Domain.Entities;
 using Inventory.Domain.Constants;
 
 namespace Inventory.Domain.Features.Products.Commands.UpdateProduct;

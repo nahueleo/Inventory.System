@@ -54,6 +54,9 @@ public static class RabbitMQInjection
         // Register message publisher
         services.AddScoped<IMessagePublisher, RabbitMQMessagePublisher>();
 
+        // Register consumer
+        services.AddSingleton<RabbitMQConsumer>();
+
         return services;
     }
 } 
