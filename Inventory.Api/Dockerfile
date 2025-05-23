@@ -22,12 +22,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 COPY --from=build /app/publish .
 COPY --from=build /app/data /app/data
-COPY --from=build /src/Inventory.Api/entrypoint.sh .
 
 # Create data directory and set permissions in the final image
-RUN mkdir -p /app/data && chmod 777 /app/data && \
-    chmod +x /app/entrypoint.sh
+RUN mkdir -p /app/data && chmod 777 /app/data
 
-# Run migrations and start the app
-ENTRYPOINT ["/app/entrypoint.sh"]
+EXPOSE 5001
+
+ENTRYPOINT ["dotnet", "Inventory.Api.dll"]
 

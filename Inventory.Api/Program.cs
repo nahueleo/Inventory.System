@@ -2,6 +2,7 @@ using Inventory.Api.Mappers;
 using Inventory.Infrastructure.DependencyInjection;
 using System.Reflection;
 using Microsoft.OpenApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,13 @@ builder.Services.AddMediatR(cfg => {
 });
 
 var app = builder.Build();
+
+// Ejecutar migraciones al inicio
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<Inventory.Infrastructure.Data.InventoryDbContext>();
+    db.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
