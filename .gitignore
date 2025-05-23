@@ -59,16 +59,6 @@ bld/
 # Docker
 .docker/
 
-# Ignore everything
-*
-
-# But not these files/folders...
-!.gitignore
-!data/
-data/*
-!data/inventory.db
-!data/.gitkeep
-
 # Visual Studio files
 .vs/
 *.user
